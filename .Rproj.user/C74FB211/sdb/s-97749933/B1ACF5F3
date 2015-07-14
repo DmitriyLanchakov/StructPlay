@@ -1,0 +1,16 @@
+{
+    "contents" : "\n# This is the user-interface definition of a Shiny web application.\n# You can find out more about building applications with Shiny here:\n#\n# http://shiny.rstudio.com\n#\n\n\nlibrary(shiny)\n\nshinyUI(fixedPage(\n\n  # Application title\n  titlePanel(\"Греческий ренессанс: волатильность и отвага!\"),\n\n\n  # Sidebar with a slider input for number of bins\n  sidebarLayout(\n    sidebarPanel(width = 4,\n      \n                 h3(\"Входные параметры\"),\n                 p(\"От срока инвестирования и риска зависит коэффициент участия, а от целевого уровня базового актива - ожидаемая доходность.\n                   Изменить параметры и посмотрите, что получится.\"),\n                 \n      fixedRow(      \n               \n               column(width=5, numericInput('faceInput', 'Объём сделки, руб.', 1000000, 1000000, Inf, 100000)),\n               column(width=5, dateInput('expdateInput', value ='2015-12-15', 'Срок инвестирования', weekstart=1))\n                      ),\n    \n      fixedRow(\n        \n        column(width=5, sliderInput('defInput', \"Защита капитала, %\", 90, 100, 100, 0.5)),\n        column(width=5, numericInput('targetInput', 'Целевой уровень', min=0, value=17))\n        \n        ),\n\n      htmlOutput('paramsTable')\n\n    ),\n\n    # Show a plot of the generated distribution\n    mainPanel(\n      \n      htmlOutput('baseassetChart'),\n      htmlOutput('profileChart'),\n      htmlOutput(\"descr\")\n      \n    ), fluid=F\n  )\n))\n",
+    "created" : 1435911580023.000,
+    "dirty" : false,
+    "encoding" : "CP1251",
+    "folds" : "",
+    "hash" : "53467790",
+    "id" : "B1ACF5F3",
+    "lastKnownWriteTime" : 1436886924,
+    "path" : "~/RBackup/StructPlay/ui.R",
+    "project_path" : "ui.R",
+    "properties" : {
+    },
+    "source_on_save" : false,
+    "type" : "r_source"
+}

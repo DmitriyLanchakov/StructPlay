@@ -1,0 +1,21 @@
+{
+    "debugBreakpointsState" : {
+        "breakpoints" : [
+            {
+                "editor_line_number" : 83,
+                "editor_state" : 1,
+                "function_name" : "StructParams",
+                "function_steps" : "6",
+                "id" : 0,
+                "is_package_breakpoint" : false,
+                "is_pending_debug_completion" : false,
+                "line_number" : 83,
+                "needs_updated_steps" : false,
+                "package_name" : "",
+                "path" : "~/RBackup/StructPlay/structplay.R",
+                "state" : 1,
+                "type" : 0
+            }
+        ]
+    }
+}
