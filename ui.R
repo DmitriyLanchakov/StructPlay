@@ -11,27 +11,24 @@ library(shiny)
 shinyUI(fixedPage(
 
   # Application title
-  titlePanel("Греческий ренессанс: волатильность и отвага!"),
+  titlePanel("Greek Renaissance"),
 
 
   # Sidebar with a slider input for number of bins
   sidebarLayout(
     sidebarPanel(width = 4,
       
-                 h3("Входные параметры"),
-                 p("От срока инвестирования и риска зависит коэффициент участия, а от целевого уровня базового актива - ожидаемая доходность.
-                   Изменить параметры и посмотрите, что получится."),
                  
       fixedRow(      
                
-               column(width=5, numericInput('faceInput', 'Объём сделки, руб.', 1000000, 1000000, Inf, 100000)),
-               column(width=5, dateInput('expdateInput', value ='2015-12-15', 'Срок инвестирования', weekstart=1))
+               column(width=5, numericInput('faceInput', 'Face value ', 1000000, 1000000, Inf, 100000)),
+               column(width=5, dateInput('expdateInput', value ='2015-12-15', 'Expiration date', weekstart=1))
                       ),
     
       fixedRow(
         
-        column(width=5, sliderInput('defInput', "Защита капитала, %", 90, 100, 100, 0.5)),
-        column(width=5, numericInput('targetInput', 'Целевой уровень', min=0, value=17))
+        column(width=5, sliderInput('defInput', "Capital protection, %", 90, 100, 100, 0.5)),
+        column(width=5, numericInput('targetInput', 'Target', min=0, value=17))
         
         ),
 

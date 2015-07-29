@@ -1,0 +1,17 @@
+{
+    "contents" : "\n# This is the user-interface definition of a Shiny web application.\n# You can find out more about building applications with Shiny here:\n#\n# http://shiny.rstudio.com\n#\n\n\nlibrary(shiny)\n\nshinyUI(fixedPage(\n\n  # Application title\n  titlePanel(\"Greek Renaissance\"),\n\n\n  # Sidebar with a slider input for number of bins\n  sidebarLayout(\n    sidebarPanel(width = 4,\n      \n                 \n      fixedRow(      \n               \n               column(width=5, numericInput('faceInput', 'Face value ', 1000000, 1000000, Inf, 100000)),\n               column(width=5, dateInput('expdateInput', value ='2015-12-15', 'Expiration date', weekstart=1))\n                      ),\n    \n      fixedRow(\n        \n        column(width=5, sliderInput('defInput', \"Capital protection, %\", 90, 100, 100, 0.5)),\n        column(width=5, numericInput('targetInput', 'Target', min=0, value=17))\n        \n        ),\n\n      htmlOutput('paramsTable')\n\n    ),\n\n    # Show a plot of the generated distribution\n    mainPanel(\n      \n      htmlOutput('baseassetChart'),\n      htmlOutput('profileChart'),\n      htmlOutput(\"descr\")\n      \n    ), fluid=F\n  )\n))\n",
+    "created" : 1438148803319.000,
+    "dirty" : false,
+    "encoding" : "CP1251",
+    "folds" : "",
+    "hash" : "2742216758",
+    "id" : "342A1BE3",
+    "lastKnownWriteTime" : 1438148987,
+    "path" : "~/MyR/StructPlay/ui.R",
+    "project_path" : "ui.R",
+    "properties" : {
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "type" : "r_source"
+}

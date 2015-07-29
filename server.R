@@ -69,9 +69,9 @@ shinyServer(function(input, output) {
     result$startDate = as.character(result$startDate, '%d.%m.%Y')
     result$endDate   = as.character(result$endDate, '%d.%m.%Y')
     result = gather(result, 'xx', 'yy')
-    result$zz = c('Срок инвестирования, дней', 'Дата начала', 'Дата завершения', "Начальная цена", "Целевой уровень", "Коэффициент участия", "Доходность за период, %", "Доходность, % годовых")
+    result$zz = c('Investment days', 'Start date', 'End date', "Start price", "Target price", "Participation", "ROR, %", "ROR, annual %")
     result = result[, c('zz', 'yy')]
-    names(result) = c("Параметр", "Значение")
+    names(result) = c("Parametre", "Value")
     
     gvisTable(result, options=list(width='300', sort='disable'))
     
