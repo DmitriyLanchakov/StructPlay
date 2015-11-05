@@ -1,10 +1,4 @@
 
-# This is the server logic for a Shiny web application.
-# You can find out more about building applications with Shiny here:
-#
-# http://shiny.rstudio.com
-#
-
 
 source(file = 'structplay.R', echo=F)
 
@@ -18,43 +12,47 @@ shinyServer(function(input, output) {
   revals = reactiveValues()
   
   #
-  # Structured prams reactive list calculation
+  # Download base asset data
+  # 
+  observe({
+    
+    input$refresh
+    
+    isolate({  baseasset = AssetChartData('RTS.RS', input$investperiod/12, s1=1, target=input$targetInput) })
+    
+    revals$baseasset = baseasset
+  })
+  
+  
+  #
+  # Render base asset chart
+  #
+  output$baseassetChart = renderGvis({
+    
+    DrawAssetChart(revals$baseasset[['chartdata']])
+    
+  })
+  
+  
+  #
+  # Structured params calculation - reactive list
   #  
   
   observe({
     
-    input$faceInput
-    endDate = input$expdateInput
-    def = input$defInput/100
-    target = input$targetInput
-    assetPrice = as.numeric(lastpoint[[2]][drop=T])
-    startDate =  as.Date(lastpoint[[1]][drop=T])
+    input$refresh
     
-    #print(paste('AssetPrice=', assetPrice, ))
+    isolate({
+      revals$params = NULL
+      params = StructParams(input$marketrate/100, 
+                   input$iv/100,
+                   input$defInput/100,
+                   input$investperiod/12, 
+                   input$longshort )
+      
+    })
     
-    params = StructParams(rdepo=0.12, 
-                          def=def, 
-                          assetPrice=assetPrice, 
-                          startDate=startDate, 
-                          endDate=endDate, 
-                          sigma=0.6,
-                          r=0.0, 
-                          TypeFlag='c', 
-                          X=assetPrice)
-    
-    params$startDate = startDate
-    params$endDate = endDate
-    params$s1 = assetPrice
-    params$target = target
-    params$payrate = (target/assetPrice - 1)*params$Partn
-    params$payratey = params$payrate/as.numeric(endDate - startDate)*365
-    
-    params$Partn_perc = percent(params$Partn)
-    params$payrate_perc = percent(params$payrate)
-    params$payratey_perc = percent(params$payratey)
-    
-   revals$params = params
-    
+    revals$params = params
     
   })
   
@@ -64,75 +62,78 @@ shinyServer(function(input, output) {
   #
   output$paramsTable = renderGvis({
     
-    result = as.data.frame((revals$params))
-    result = result %>% dplyr::select(Days, startDate, endDate, s1, target, Partn_perc, payrate_perc, payratey_perc)
-    result$startDate = as.character(result$startDate, '%d.%m.%Y')
-    result$endDate   = as.character(result$endDate, '%d.%m.%Y')
-    result = gather(result, 'xx', 'yy')
-    result$zz = c('Investment days', 'Start date', 'End date', "Start price", "Target price", "Participation", "ROR, %", "ROR, annual %")
-    result = result[, c('zz', 'yy')]
-    names(result) = c("Parametre", "Value")
+    revals$params
     
-    gvisTable(result, options=list(width='300', sort='disable'))
-    
+    isolate({
+      result = c(revals$params, revals$baseasset[2:4])
+      result$roe = StructProfile(input$targetInput, result$curprice, input$longshort, input$defInput/100, result$Partn, input$investperiod/12)
+      result$roeann = result$roe / (input$investperiod/12)
+      result[c('roe', 'roeann', 'Partn')] = lapply(result[c('roe', 'roeann', 'Partn')], percent)
+      result$target = input$targetInput
+      result = result[c('today', 'expdate', 'curprice', 'target', 'Partn', 'roe', 'roeann')]
+      result = result %>% data.frame %>% t %>% data.frame
+      names(result) = 'Value'
+      result$Params = c('Start date', 'End date', "Start price", "Target price", "Participation", "ROE, %", "ROE, annual %")
+      
+      
+      
+    })
+
+    gvisTable(result[, c('Params', 'Value')], options=list(width=600, sort='disable'))
   })
   
   
-  #
-  # Render base asset chart
-  #
-  output$baseassetChart = renderGvis({
-    
-    #browser()
-    DrawAssetChart(raw.data, expdate =  input$expdateInput, ticker = 'GREK', target = input$targetInput)
-    
-  })
+
   
   #
   # Render structured product profile chart
   #
   output$profileChart = renderGvis({
     
-
-     def = input$defInput/100
-     ku = revals$params$Partn
-     face = input$faceInput
-     X1 = as.numeric(lastpoint[[2]][drop=T])
-     target = input$targetInput
-     
-     xEnd = X1 + abs(target - X1) * 1.1
-     xStart = X1 * (1- abs(xEnd/X1-1))
-     xPoints = seq(from = xStart, to = xEnd, length.out = 100)
-     
     
-     prfl = StructProfile(xPoints, def=def, ku=ku, face=face, X1=X1 ) - face
-    chart.data = data.frame(GREK = xPoints, Profit=prfl, Breakeven=0)
+    revals$params
     
-    gchart = gvisComboChart(data = chart.data, 
-                            xvar=c('GREK'), 
-                            yvar=c('Profit', 'Breakeven'), 
-                            options = list(
-                              chartArea = "{left:100,top:10}",
-                              series = "[{color:'red', targetAxisIndex: 0, lineWidth: 2}, 
-  {color: 'grey',targetAxisIndex: 0, lineWidth: 1, lineDashStyle: [4, 2]}]",
-                              height=350, 
-                              width=600, 
-                              seriesType='line', 
-                              legend= "{ position: 'in' }",   
-                              hAxis = "{baselineColor: 'white', gridlines: {color: 'white'}}"
-                              
-                              
-                            ) )
-    gchart$html$footer = ''
-    gchart$html$caption = ''
-    
-    gchart
+    isolate({
+      
+      def = input$defInput/100
+      ku = revals$params$Partn
+      X1 = revals$baseasset$curprice
+      target = input$targetInput
+      
+      xEnd = X1 + abs(target - X1) * 1.1
+      xStart = X1 * (1- abs(xEnd/X1-1))
+      xPoints = seq(from = xStart, to = xEnd, length.out = 100)
+      
+      
+      prfl = StructProfile(xPoints, X1,  input$longshort, def, ku, input$investperiod/12)
+      
+      chart.data = data.frame(AssetPrice = round(xPoints, 2), Profit=round(prfl*100, 2), Breakeven=0)
+      
+      gchart = gvisComboChart(data = chart.data, 
+                              xvar=c('AssetPrice'), 
+                              yvar=c('Profit', 'Breakeven'), 
+                              options = list(
+                                chartArea = "{left:50,top:10,right:0,bottom:50}",
+                                series = "[{color:'red', targetAxisIndex: 0, lineWidth: 2}, 
+                                {color: 'grey',targetAxisIndex: 0, lineWidth: 1, lineDashStyle: [4, 2]}]",
+                                height=350, 
+                                width=600, 
+                                seriesType='line', 
+                                legend= "{ position: 'in' }",   
+                                hAxis = "{baselineColor: 'white', gridlines: {color: 'white'}, title: 'Base asset price'}",
+                                vAxis="{title:'Profit, %'}"
+                                
+                                
+                              ) )
+      gchart$html$footer = ''
+      gchart$html$caption = ''
+      
+      gchart
+      
+    })
     
   })
   
   
-  
-  
-  
-})
+ })
 

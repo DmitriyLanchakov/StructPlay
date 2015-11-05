@@ -1,146 +1,107 @@
 
 
-
-require(dplyr)
-library(googleVis)
-library(tidyr)
-
+#load('chartdata.Rdata')
 
 #+------------------------------------+
-#  Option profile
+#  Structured product parameters
 #+------------------------------------+
-OptionProfile = function(S.vector, startDate=NULL, endDate=NULL, price=0, face=1, ...){
+
+StructParams = function(marketrate, iv, def, period, trade){
   
-  library(fOptions)
+  require(fOptions)
+
+  optprice = GBSOption(trade, 1, 1, period, 0, marketrate, iv)@price
+  ku = (marketrate*period + 1-def) / optprice 
   
-  params = list(...)
-  TypeFlag = substr(tolower(params$TypeFlag), 1, 1)
-  X = as.numeric(params$X)
-  
-  Time = params$Time
-  
-  if(is.null(params$sigma)){
-    params$sigma = 0.6
-    Time = 0
-  }
-  
-  if(is.null(Time))
-    Time = as.numeric(endDate - startDate)
-  
-  if(Time == 0)
-    Time = 0.0000001
-  
-  Time = as.numeric(Time)/252
-  
-  r = as.numeric(params$r)
-  b = r
-  sigma = as.numeric(params$sigma)
-  
-  result = sapply(S.vector, function(x){
-    
-    S = x
-    GBSOption(TypeFlag, S, X, Time, r, b, sigma)@price
-  }) - price
-  result = result * face
-  
-  return(result)
+  return(list(Days=period*365, Partn=ku))
 }
 
+# StructParams(0.1, 0.2, 1, 1/4, 'c')
+
+
 
 #+------------------------------------+
-#  Structured product
+#  Structured product profile
 #+------------------------------------+
 
-StructProfile = function(S.vector, def=1, ku=1, face=1, startDate=NULL, endDate=NULL, Time=NULL, ...){
+StructProfile = function(S.vector, strike, trade='c', def=1, ku=1, period=1){
   
-  params = list(...)
-  X1 = params$X1
+  if(trade=='c') trade=1 else trade=-1
   
   result = sapply(S.vector, function(x){
-    
-    face * (def + max(0, x/X1-1) * ku)
+    (def + max(0, (x/strike-1)*trade*ku)) - 1
   })
   
   return(result)
 }
 
+# StructProfile(seq(from=0.8, to=1.2, by=0.01), def=0.9) %>% plot
 
-StructParams = function(rdepo=0.1, def=1, assetPrice, ...){
+
+
+#+------------------------------------+
+#  Structured product profile
+#+------------------------------------+
+
+AssetChartData <- function(ticker, period, s1=1, target, projection=3, outputformat = 'dataframe') {
   
-  params = list(...)
+  require(quantmod)
+  require(dplyr)
+  require(tidyr)
+  require(googleVis)
   
+  # temp vars
+  # ticker = 'RTS.RS'; period = 1/4; target = 1000; outputformat = c('dataframe', 'xts')
+  suppressWarnings({
+  tickerdata = getSymbols(ticker, auto.assign = F, warnings = F)[, paste0(ticker, '.Close')]
+  })
   
-  optprice = OptionProfile(S.vector=assetPrice, startDate=params$startDate, endDate=params$endDate, Time=params$Time,
-                           sigma=params$sigma, r=params$r, TypeFlag=params$TypeFlag, X=params$X)
+  today   = index(tickerdata) %>% max
+  expdate = today + period*365
+  frstday =  today - (expdate - today)*projection
+  tickerdata = tickerdata[paste0(frstday, '/', expdate),]
   
-  if(is.null(params$Time)) 
-    Time = as.numeric(as.Date(params$endDate) - as.Date(params$startDate))
-  else
-    Time = params$Time
+  curprice = as.numeric(tickerdata[today, 1, drop=T])
+  s1 = curprice * s1
   
-  ku = (rdepo + 1-def) / (optprice / assetPrice / Time*365)
+  targetdata = data.frame(dates = seq(from=today, to=expdate, by=1), target=target)
+  targetdata = try.xts(x = targetdata[,2, drop=F], order.by = targetdata$dates)
   
-  return(list(Days=Time, Partn=ku))
+  chartdata = cbind(tickerdata, targetdata) 
+  
+  names(chartdata) = c(ticker, 'Target')
+  
+  if(outputformat=='dataframe'){
+    chartdata = as.data.frame(chartdata)
+    chartdata$Dates = row.names(chartdata)
+  }
+  
+  res = list(chartdata=chartdata,
+             today=today,
+             expdate=expdate,
+             curprice=curprice)
+  
+  #res = chartdata
+  return(res)
 }
 
-
-load('chartdata.Rdata')
-lastpoint = raw.data[which.max(raw.data$Date),]
-
-target = 65
-# s1 = 1
-# s2 = 0.85
-
-# +-----------------------+
-# | Prepare data for plot |
-# +-----------------------+
+# assetdata = AssetChartData('RTS.RS', 1, target=1000, outputformat = 'dataframe')[2:4] %>% View
 
 
-# LoadNSaveData = function(){
-#   
-#   require(dplyr)
-#   
-#   ticker = 'GREK'
-#   xfile.path = 'c:\\1\\grek.csv'
-#   col.date = 1
-#   col.close = 5
-#   xdate.format = '%Y-%m-%d'
-#   
-#   raw.data = read.csv(file = xfile.path)
-#   raw.data = raw.data %>% dplyr::select(col.date, col.close)
-#   names(raw.data) = c('Date', ticker)
-#   raw.data$Date = as.Date(strptime(as.character(raw.data$Date), xdate.format))
-#   save(raw.data, file = 'chartdata.Rdata')
-#   
-# }
-# 
-# load(file = 'chartdata.Rdata')
 
-#### Base asset data prepared ###
+#+------------------------------------+
+#  Base asset chart with target
+#+------------------------------------+
 
-DrawAssetChart <- function (raw.data, expdate, ticker, s1=NULL, s2=NULL, target) {
+DrawAssetChart = function(chartdata){
   
-  today   = max(raw.data$Date)
-  expdate = as.Date(expdate)
-  frstday =  today - (expdate - today)*2.5
+  yvars = colnames(chartdata) %>% .[.!='Dates']
   
-  curprice =subset(raw.data, Date==today, get('ticker'), drop=T)
-  s1 = curprice * s1
-  s2 = curprice * s2 
-  
-  add.data = data.frame(Date=as.Date(seq(from=today, to=expdate, by=1)), Ticker = NA, Target = target)
-  names(add.data) = c('Date', ticker, 'Target')
-  
-  chart.data = raw.data %>% dplyr::filter(Date > frstday) %>% dplyr::bind_rows(add.data)
-  
-  # View(raw.data)
- 
-  
-  gchart = gvisComboChart(data = chart.data, 
-                          xvar=c('Date'), 
-                          yvar=c(ticker, 'Target'), 
+  gchart = gvisComboChart(data = chartdata, 
+                          xvar='Dates', 
+                          yvar=yvars, 
                           options = list(
-                            chartArea = "{left:100,top:10}",
+                            chartArea = "{left:50,top:10,right:0}",
                             series = "[{color:'red', targetAxisIndex: 0, lineWidth: 2},
   {color: 'grey',targetAxisIndex: 0, lineWidth: 1, lineDashStyle: [4, 2]}]",
                             height=300, 
@@ -157,5 +118,7 @@ DrawAssetChart <- function (raw.data, expdate, ticker, s1=NULL, s2=NULL, target)
   return(gchart)
 }
 
-#plot(DrawAssetChart(raw.data, as.Date('2015-09-15'), ticker, s1=NULL, s2=NULL, target))
+#   drawdata = assetdata[['chartdata']]
+# DrawAssetChart((drawdata)) %>% plot
+
 
